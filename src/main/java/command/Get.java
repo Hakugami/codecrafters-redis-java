@@ -1,6 +1,7 @@
 package command;
 
 import config.ObjectFactory;
+import storage.Storage;
 import storage.StorageRecord;
 
 public class Get extends AbstractHandler {

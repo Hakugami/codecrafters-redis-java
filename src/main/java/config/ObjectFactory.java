@@ -17,8 +17,8 @@ public class ObjectFactory {
         this.properties = properties;
         this.protocolSerializer = new ProtocolSerializer();
         this.protocolDeserializer = new ProtocolDeserializer();
-        this.commandFactory = new CommandFactory(this);
         this.storage = new Storage();
+        this.commandFactory = new CommandFactory(this);
     }
 
     public ApplicationProperties getProperties() {
