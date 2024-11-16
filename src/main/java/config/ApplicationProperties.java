@@ -5,6 +5,7 @@ import replica.ReplicaClient;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ApplicationProperties {
     private int port = 6379;
@@ -26,6 +27,14 @@ public class ApplicationProperties {
         parseArgs(args);
         if (isMaster()) {
             setMasterProperties();
+        }
+    }
+
+    public void addReplicaClient(ReplicaClient replicaClient) {
+        if(replicaClients == null) {
+            replicaClients = new CopyOnWriteArrayList<>();
+        } else {
+            replicaClients.add(replicaClient);
         }
     }
 

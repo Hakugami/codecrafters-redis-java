@@ -32,7 +32,7 @@ public class ProtocolDeserializer {
     private Pair<String, Long> parseBulkString(DataInputStream dataInputStream) throws IOException {
         Pair<Integer, Long> lengthPair = parseDigits(dataInputStream);
         int length = lengthPair.getLeft();
-        
+
         // Handle null bulk string
         if (length == -1) {
             return Pair.of("$-1\r\n", lengthPair.getRight());
@@ -98,7 +98,7 @@ public class ProtocolDeserializer {
             if (b == -1) {
                 throw new EOFException("Unexpected end of stream while reading digits");
             }
-            
+
             char c = (char) b;
             bytesRead++;
 
@@ -158,4 +158,18 @@ public class ProtocolDeserializer {
         Pair<Integer, Long> pair = parseDigits(dataInputStream);
         return Pair.of(String.valueOf(pair.getLeft()), pair.getRight());
     }
+
+    public String parseRdbFile(DataInputStream inputStream) throws IOException {
+        char c = (char) inputStream.readByte();
+        if (c != '$') {
+            throw new RuntimeException("Unexpected start of RDB file string: " + c);
+        }
+        int stringLength = parseDigits(inputStream).getLeft();
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < stringLength; i++) {
+            stringBuilder.append((char) inputStream.readByte());
+        }
+        return stringBuilder.toString();
+    }
+
 }

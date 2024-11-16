@@ -43,7 +43,8 @@ public class CommandFactory {
         CONFIG(Config.class),
         KEYS(Keys.class),
         SAVE(Save.class),
-        INFO(Info.class),;
+        INFO(Info.class),
+        PSYNC(Psync.class),;
 
         private final Class<? extends Handler> handler;
 
