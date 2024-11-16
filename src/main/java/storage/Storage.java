@@ -1,5 +1,6 @@
 package storage;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -12,11 +13,18 @@ public class Storage {
         this.store = new ConcurrentHashMap<>();
     }
 
-    public void set(String key, byte[] value, ValueType type) {
-        store.put(key, new StorageRecord(type, value));
+    public void set(String key, byte[] value, ValueType type, Instant expiry) {
+        store.put(key, new StorageRecord(type, value, expiry));
     }
 
     public StorageRecord get(String key) {
-        return store.get(key);
+        StorageRecord record = store.get(key);
+        if (record != null && record.expiry() != null) {
+            if (Instant.now().isAfter(record.expiry())) {
+                store.remove(key);
+                return null;
+            }
+        }
+        return record;
     }
 }
