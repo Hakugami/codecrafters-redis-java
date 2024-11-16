@@ -1,30 +1,31 @@
+import command.ConnectionHandler;
+import config.ApplicationProperties;
+import config.ObjectFactory;
+
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.logging.Logger;
 
 public class Main {
-  public static void main(String[] args){
+    private static final Logger logger = Logger.getLogger(Main.class.getName());
 
-        ServerSocket serverSocket = null;
-        Socket clientSocket = null;
-        int port = 6379;
-        try {
-          serverSocket = new ServerSocket(port);
-          // Since the tester restarts your program quite often, setting SO_REUSEADDR
-          // ensures that we don't run into 'Address already in use' errors
-          serverSocket.setReuseAddress(true);
-          // Wait for connection from client.
-          clientSocket = serverSocket.accept();
-        } catch (IOException e) {
-          System.out.println("IOException: " + e.getMessage());
-        } finally {
-          try {
-            if (clientSocket != null) {
-              clientSocket.close();
+    public static void main(String[] args) {
+        ApplicationProperties properties = new ApplicationProperties(args);
+        logger.info("Starting server on port " + properties.getPort());
+        ObjectFactory objectFactory = new ObjectFactory(properties);
+
+        try (ServerSocket serverSocket = new ServerSocket(properties.getPort())) {
+            serverSocket.setReuseAddress(true);
+            while (true) {
+                Socket socket = serverSocket.accept();
+                logger.info("Client connected " + socket.getInetAddress().getHostAddress());
+                new ConnectionHandler(socket, objectFactory).start();
             }
-          } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
-          }
+        } catch (IOException e) {
+            logger.severe("Failed to start server " + e);
+
         }
-  }
+    }
 }
