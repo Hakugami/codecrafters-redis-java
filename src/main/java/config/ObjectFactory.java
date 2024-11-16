@@ -1,9 +1,9 @@
 package config;
 
-import command.CommandFactory;
-import lombok.Data;
+import command.factory.CommandFactory;
 import protocol.ProtocolDeserializer;
 import protocol.ProtocolSerializer;
+import storage.Storage;
 
 
 public class ObjectFactory {
@@ -11,12 +11,14 @@ public class ObjectFactory {
     private final CommandFactory commandFactory;
     private final ProtocolSerializer protocolSerializer ;
     private final ProtocolDeserializer protocolDeserializer;
+    private final Storage storage;
 
     public ObjectFactory(ApplicationProperties properties) {
         this.properties = properties;
         this.protocolSerializer = new ProtocolSerializer();
         this.protocolDeserializer = new ProtocolDeserializer();
         this.commandFactory = new CommandFactory(this);
+        this.storage = new Storage();
     }
 
     public ApplicationProperties getProperties() {
@@ -33,5 +35,9 @@ public class ObjectFactory {
 
     public ProtocolDeserializer getProtocolDeserializer() {
         return protocolDeserializer;
+    }
+
+    public Storage getStorage() {
+        return storage;
     }
 }

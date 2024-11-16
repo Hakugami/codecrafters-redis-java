@@ -1,5 +1,6 @@
-package command;
+package command.factory;
 
+import command.*;
 import config.ObjectFactory;
 
 import java.lang.reflect.Constructor;
@@ -36,7 +37,9 @@ public class CommandFactory {
 
     private enum Command {
         PING(Ping.class),
-        ECHO(Echo.class);
+        ECHO(Echo.class),
+        SET(Set.class),
+        GET(Get.class);
 
         private final Class<? extends Handler> handler;
 
