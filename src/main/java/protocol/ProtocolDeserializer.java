@@ -15,7 +15,7 @@ public class ProtocolDeserializer {
             try {
                 firstByte = dataInputStream.read();
             } catch (EOFException e) {
-                throw e; // Propagate EOFException directly
+                throw new EOFException("End of stream reached");
             }
 
             if (firstByte == -1) {
@@ -31,7 +31,7 @@ public class ProtocolDeserializer {
             };
             return Pair.of(parsedResult.getLeft(), parsedResult.getRight() + 1);
         } catch (EOFException e) {
-            throw e; // Propagate EOFException instead of wrapping
+            throw new EOFException("Unexpected end of stream while reading input");
         } catch (IOException e) {
             throw new RuntimeException("IO error occurred", e);
         }
@@ -131,7 +131,11 @@ public class ProtocolDeserializer {
                     }
                 })
                 .reduce(Pair.of("", pair.getRight()),
-                        (acc, p) -> Pair.of(acc.getLeft() + p.getLeft(),
-                                acc.getRight() + p.getRight()));
+                        (acc, p) -> {
+                            String newString = acc.getLeft().isEmpty()
+                                    ? p.getLeft()  // First element - no space needed
+                                    : acc.getLeft() + " " + p.getLeft();  // Add space between elements
+                            return Pair.of(newString, acc.getRight() + p.getRight());
+                        });
     }
 }

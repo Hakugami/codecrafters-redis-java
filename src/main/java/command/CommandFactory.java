@@ -35,7 +35,8 @@ public class CommandFactory {
 
 
     private enum Command {
-        PING(Ping.class);
+        PING(Ping.class),
+        ECHO(Echo.class);
 
         private final Class<? extends Handler> handler;
 
