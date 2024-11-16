@@ -44,7 +44,8 @@ public class CommandFactory {
         KEYS(Keys.class),
         SAVE(Save.class),
         INFO(Info.class),
-        PSYNC(Psync.class),;
+        PSYNC(Psync.class),
+        REPLCONF(ReplConf.class),;
 
         private final Class<? extends Handler> handler;
 
