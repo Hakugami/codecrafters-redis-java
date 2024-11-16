@@ -1,10 +1,22 @@
 package config;
 
 
+import replica.ReplicaClient;
+
 import java.security.SecureRandom;
+import java.util.List;
 
 public class ApplicationProperties {
     private int port = 6379;
+
+    //Replication
+    private ReplicaProperties replicaProperties;
+
+    //Replication Master
+    private String replicationId ;
+    private long replicationOffset = 0L;
+    private List<ReplicaClient> replicaClients;
+
 
     // RDB file properties
     private String dir = System.getProperty("user.dir");
@@ -21,9 +33,18 @@ public class ApplicationProperties {
                 case "port" -> port = Integer.parseInt(args[++i]);
                 case "dir" -> dir = args[++i];
                 case "dbfilename" -> dbFileName = args[++i];
+                case "replicaof" -> {
+                    String[] replicaParams = args[++i].split(" ");
+                    replicaProperties = new ReplicaProperties(replicaParams[0], Integer.parseInt(replicaParams[1]));
+                }
                 default -> throw new IllegalArgumentException("Invalid argument: " + param);
             }
         }
+    }
+
+    private void setMasterProperties(){
+        this.replicationId = generateRandomString(40);
+        this.replicationOffset = 0L;
     }
 
     public static String generateRandomString(int length) {
@@ -58,4 +79,9 @@ public class ApplicationProperties {
     public void setDbFileName(String dbFileName) {
         this.dbFileName = dbFileName;
     }
+
+    public ReplicaProperties getReplicaProperties() {
+        return replicaProperties;
+    }
+
 }

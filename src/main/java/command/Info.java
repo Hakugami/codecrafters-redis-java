@@ -9,6 +9,9 @@ public class Info extends AbstractHandler {
 
     @Override
     public byte[] handle(String[] args) {
-        return protocolSerializer.bulkStrings("role:master");
+        if(ObjectFactory.getInstance().getProperties().getReplicaProperties()==null) {
+            return protocolSerializer.bulkStrings("role:master");
+        }
+        return protocolSerializer.bulkStrings("role:slave");
     }
 }
