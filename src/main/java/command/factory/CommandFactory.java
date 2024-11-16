@@ -39,7 +39,8 @@ public class CommandFactory {
         PING(Ping.class),
         ECHO(Echo.class),
         SET(Set.class),
-        GET(Get.class);
+        GET(Get.class),
+        CONFIG(Config.class);
 
         private final Class<? extends Handler> handler;
 

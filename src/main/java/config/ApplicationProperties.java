@@ -44,6 +44,18 @@ public class ApplicationProperties {
         return dir;
     }
 
+    public void setDir(String dir) {
+        this.dir = dir;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public void setDbFileName(String dbFileName) {
+        this.dbFileName = dbFileName;
+    }
+
     public String getDbFileName() {
         return dbFileName;
     }
