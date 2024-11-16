@@ -12,7 +12,7 @@ public class Set extends AbstractHandler {
 
     public Set(ObjectFactory objectFactory) {
         super(objectFactory);
-        this.storage = objectFactory.getStorage();
+        this.storage = objectFactory.getPersistenceManager().getStorage();
     }
 
     @Override

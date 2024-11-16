@@ -3,6 +3,7 @@ package storage;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
 
 import protocol.ValueType;
 
@@ -26,5 +27,20 @@ public class Storage {
             }
         }
         return record;
+    }
+
+    public Map<String, StorageRecord> getStore() {
+        Map<String, StorageRecord> copy = new ConcurrentHashMap<>();
+        store.forEach((k, v) -> copy.put(k, new StorageRecord(v.type(), v.data(), v.expiry())));
+        return copy;
+    }
+
+    public Set<String> getAllKeys() {
+        return store.keySet();
+    }
+
+    public void setStore(Map<String, StorageRecord> store) {
+        this.store.clear();
+        store.forEach((k, v) -> this.store.put(k, new StorageRecord(v.type(), v.data(), v.expiry())));
     }
 }

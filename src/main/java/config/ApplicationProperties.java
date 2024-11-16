@@ -1,6 +1,5 @@
 package config;
 
-import lombok.Getter;
 
 import java.security.SecureRandom;
 
@@ -40,6 +39,10 @@ public class ApplicationProperties {
         return port;
     }
 
+    public void setPort(int port) {
+        this.port = port;
+    }
+
     public String getDir() {
         return dir;
     }
@@ -48,15 +51,11 @@ public class ApplicationProperties {
         this.dir = dir;
     }
 
-    public void setPort(int port) {
-        this.port = port;
+    public String getDbFileName() {
+        return dbFileName;
     }
 
     public void setDbFileName(String dbFileName) {
         this.dbFileName = dbFileName;
-    }
-
-    public String getDbFileName() {
-        return dbFileName;
     }
 }

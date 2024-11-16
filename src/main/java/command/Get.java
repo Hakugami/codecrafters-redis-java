@@ -9,7 +9,7 @@ public class Get extends AbstractHandler {
 
     public Get(ObjectFactory objectFactory) {
         super(objectFactory);
-        this.storage = objectFactory.getStorage();
+        this.storage = objectFactory.getPersistenceManager().getStorage();
     }
 
     @Override

@@ -1,14 +1,15 @@
 package command;
 
-import config.ObjectFactory;
-import org.apache.commons.lang3.tuple.Pair;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.logging.Logger;
+
+import org.apache.commons.lang3.tuple.Pair;
+
+import config.ObjectFactory;
 
 public class ConnectionHandler extends Thread {
     private static final Logger logger = Logger.getLogger(ConnectionHandler.class.getName());

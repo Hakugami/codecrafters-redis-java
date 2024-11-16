@@ -40,7 +40,9 @@ public class CommandFactory {
         ECHO(Echo.class),
         SET(Set.class),
         GET(Get.class),
-        CONFIG(Config.class);
+        CONFIG(Config.class),
+        KEYS(Keys.class),
+        SAVE(Save.class);
 
         private final Class<? extends Handler> handler;
 

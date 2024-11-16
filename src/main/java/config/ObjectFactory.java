@@ -1,24 +1,49 @@
 package config;
 
 import command.factory.CommandFactory;
+
 import protocol.ProtocolDeserializer;
 import protocol.ProtocolSerializer;
-import storage.Storage;
+import protocol.persistence.PersistenceManager;
+import storage.StorageRecord;
+
+import java.io.IOException;
+import java.util.Map;
 
 
 public class ObjectFactory {
-    private final ApplicationProperties properties;
-    private final CommandFactory commandFactory;
-    private final ProtocolSerializer protocolSerializer ;
-    private final ProtocolDeserializer protocolDeserializer;
-    private final Storage storage;
+    private ApplicationProperties properties;
+    private CommandFactory commandFactory;
+    private ProtocolSerializer protocolSerializer;
+    private ProtocolDeserializer protocolDeserializer;
+    private PersistenceManager persistenceManager;
 
-    public ObjectFactory(ApplicationProperties properties) {
-        this.properties = properties;
+    private ObjectFactory() {
+    }
+
+    public static ObjectFactory getInstance(String[] args) throws IOException {
+        if (ObjectFactoryHolder.INSTANCE.properties == null) {
+            ObjectFactoryHolder.INSTANCE.init(args);
+            Map<String, StorageRecord> stringStorageRecordMap = ObjectFactoryHolder.INSTANCE.persistenceManager.getRdbLoader().readAllPairs();
+            ObjectFactoryHolder.INSTANCE.persistenceManager.getStorage().setStore(stringStorageRecordMap);
+        }
+        return ObjectFactoryHolder.INSTANCE;
+    }
+
+    public static ObjectFactory getInstance() {
+        return ObjectFactoryHolder.INSTANCE;
+    }
+
+    private static class ObjectFactoryHolder {
+        private static final ObjectFactory INSTANCE = new ObjectFactory();
+    }
+
+    public void init(String[] args) {
+        this.properties = new ApplicationProperties(args);
+        this.persistenceManager = new PersistenceManager();
         this.protocolSerializer = new ProtocolSerializer();
         this.protocolDeserializer = new ProtocolDeserializer();
-        this.storage = new Storage();
-        this.commandFactory = new CommandFactory(this);
+        this.commandFactory = new CommandFactory(ObjectFactoryHolder.INSTANCE);
     }
 
     public ApplicationProperties getProperties() {
@@ -37,7 +62,7 @@ public class ObjectFactory {
         return protocolDeserializer;
     }
 
-    public Storage getStorage() {
-        return storage;
+    public PersistenceManager getPersistenceManager() {
+        return persistenceManager;
     }
 }
