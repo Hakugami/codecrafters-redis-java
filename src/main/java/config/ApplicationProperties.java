@@ -13,7 +13,7 @@ public class ApplicationProperties {
     private ReplicaProperties replicaProperties;
 
     //Replication Master
-    private String replicationId ;
+    private String replicationId;
     private long replicationOffset = 0L;
     private List<ReplicaClient> replicaClients;
 
@@ -24,6 +24,9 @@ public class ApplicationProperties {
 
     public ApplicationProperties(String[] args) {
         parseArgs(args);
+        if (isMaster()) {
+            setMasterProperties();
+        }
     }
 
     private void parseArgs(String[] args) {
@@ -42,7 +45,7 @@ public class ApplicationProperties {
         }
     }
 
-    private void setMasterProperties(){
+    private void setMasterProperties() {
         this.replicationId = generateRandomString(40);
         this.replicationOffset = 0L;
     }
@@ -84,4 +87,23 @@ public class ApplicationProperties {
         return replicaProperties;
     }
 
+    public String getReplicationId() {
+        return replicationId;
+    }
+
+    public long getReplicationOffset() {
+        return replicationOffset;
+    }
+
+    public List<ReplicaClient> getReplicaClients() {
+        return replicaClients;
+    }
+
+    public boolean isReplica() {
+        return replicaProperties != null;
+    }
+
+    public boolean isMaster() {
+        return replicaProperties == null;
+    }
 }
