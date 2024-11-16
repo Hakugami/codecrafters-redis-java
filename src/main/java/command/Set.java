@@ -17,6 +17,7 @@ public class Set extends AbstractHandler {
 
     @Override
     public byte[] handle(String[] args) {
+        logger.info("Handling set command ");
         if (args.length < 3) {
             return protocolSerializer.simpleError("ERR wrong number of arguments for 'set' command");
         }

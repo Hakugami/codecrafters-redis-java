@@ -1,11 +1,11 @@
 package config;
 
 
-import replica.ReplicaClient;
-
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import replica.ReplicaClient;
 
 public class ApplicationProperties {
     private int port = 6379;
@@ -31,11 +31,10 @@ public class ApplicationProperties {
     }
 
     public void addReplicaClient(ReplicaClient replicaClient) {
-        if(replicaClients == null) {
+        if (replicaClients == null) {
             replicaClients = new CopyOnWriteArrayList<>();
-        } else {
-            replicaClients.add(replicaClient);
         }
+        replicaClients.add(replicaClient);
     }
 
     private void parseArgs(String[] args) {

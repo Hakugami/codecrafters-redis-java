@@ -1,128 +1,74 @@
 package replica;
 
-import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
 public class ReplicaClient {
     private static final Logger logger = Logger.getLogger(ReplicaClient.class.getName());
-    private final AsynchronousSocketChannel channel;
-    private final String replicaAddress;
-    private final int replicaPort;
 
-    public ReplicaClient(Socket socket) throws IOException {
-        this.replicaAddress = socket.getInetAddress().getHostAddress();
-        this.replicaPort = socket.getPort();
-        this.channel = AsynchronousSocketChannel.open();
-        this.channel.connect(socket.getRemoteSocketAddress());
-        logger.info("Connected to replica at " + replicaAddress + ":" + replicaPort);
+    private final Socket replicaSocket;
+
+    private final ExecutorService executorService;
+
+    public ReplicaClient(Socket replicaSocket) {
+        this.replicaSocket = replicaSocket;
+        this.executorService = Executors.newSingleThreadExecutor();
     }
 
-    public CompletableFuture<Void> send(byte[] data) {
-        logger.info("Sending data to replica at " + replicaAddress + ":" + replicaPort);
-        return writeAsync(data);
+    public void send(byte[] data) {
+        logger.info("Sending data to replica at port" + replicaSocket.getPort() + "the command is " + new String(data));
+        executorService.execute(() -> doSend(data));
     }
 
-    public CompletableFuture<byte[]> sendAndAwaitResponse(byte[] data, long timeout) {
-        logger.info("Sending data to replica at " + replicaAddress + ":" + replicaPort);
-        
-        return writeAsync(data)
-            .thenCompose(v -> readAsync())
-            .orTimeout(timeout, TimeUnit.MILLISECONDS)
-            .exceptionally(throwable -> {
-                if (throwable instanceof java.util.concurrent.TimeoutException) {
-                    logger.warning("Timeout while waiting for response from replica at " + replicaAddress + ":" + replicaPort);
-                    return null;
-                }
-                throw new RuntimeException("Error communicating with replica", throwable);
-            });
-    }
-
-    private CompletableFuture<Void> writeAsync(byte[] data) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        ByteBuffer buffer = ByteBuffer.wrap(data);
-        
-        channel.write(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
-            @Override
-            public void completed(Integer result, ByteBuffer attachment) {
-                if (attachment.hasRemaining()) {
-                    // Continue writing if there's more data
-                    channel.write(attachment, attachment, this);
-                } else {
-                    future.complete(null);
-                }
-            }
-
-            @Override
-            public void failed(Throwable exc, ByteBuffer attachment) {
-                future.completeExceptionally(exc);
-            }
-        });
-
-        return future;
-    }
-
-    private CompletableFuture<byte[]> readAsync() {
-        CompletableFuture<byte[]> future = new CompletableFuture<>();
-        ByteBuffer buffer = ByteBuffer.allocate(8192); // Adjust size as needed
-        
-        channel.read(buffer, buffer, new CompletionHandler<Integer, ByteBuffer>() {
-            private final ByteBuffer accumulator = ByteBuffer.allocate(16384);
-
-            @Override
-            public void completed(Integer result, ByteBuffer attachment) {
-                if (result == -1) {
-                    // Connection closed
-                    future.complete(getAccumulatedData());
-                    return;
-                }
-
-                attachment.flip();
-                accumulator.put(attachment);
-                
-                if (isResponseComplete()) {
-                    future.complete(getAccumulatedData());
-                } else {
-                    // Continue reading
-                    attachment.clear();
-                    channel.read(attachment, attachment, this);
-                }
-            }
-
-            @Override
-            public void failed(Throwable exc, ByteBuffer attachment) {
-                future.completeExceptionally(exc);
-            }
-
-            private boolean isResponseComplete() {
-                // Implement Redis protocol response completion check
-                // For simple string responses, check for \r\n
-                byte[] data = accumulator.array();
-                int len = accumulator.position();
-                return len >= 2 && data[len - 2] == '\r' && data[len - 1] == '\n';
-            }
-
-            private byte[] getAccumulatedData() {
-                accumulator.flip();
-                byte[] data = new byte[accumulator.remaining()];
-                accumulator.get(data);
-                return data;
-            }
-        });
-
-        return future;
-    }
-
-    public void close() {
+    public byte[] sendAndAwaitResponse(byte[] data, long timeout) {
+        logger.info("Sending data to replica at port" + replicaSocket.getPort() + "the command is " + new String(data));
+        Future<byte[]> future = executorService.submit(()-> doSendAndAwait(data));
         try {
-            channel.close();
-        } catch (IOException e) {
-            logger.warning("Error closing channel: " + e.getMessage());
+            return future.get(timeout, java.util.concurrent.TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            logger.warning("Timeout while waiting for response from replica at port " + replicaSocket.getPort());
+            future.cancel(true);
+            return null;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
+
+    private byte[] doSendAndAwait(byte[] data) {
+        try {
+            OutputStream outputStream = replicaSocket.getOutputStream();
+            outputStream.write(data);
+            logger.info("Data sent to replica at port " + replicaSocket.getPort());
+            outputStream.flush();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(replicaSocket.getInputStream()));
+            logger.info("Waiting for response from replica at port " + replicaSocket.getPort());
+            String response ;
+            while ((response = reader.readLine()) == null) {
+                Thread.sleep(100);
+            }
+            logger.info("Received response from replica at port " + replicaSocket.getPort());
+            return response.getBytes();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void doSend(byte[] data) {
+        try {
+            OutputStream outputStream = replicaSocket.getOutputStream();
+            outputStream.write(data);
+            logger.info("Data sent to replica at port " + replicaSocket.getPort());
+            outputStream.flush();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

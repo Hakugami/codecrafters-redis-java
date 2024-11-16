@@ -5,6 +5,7 @@ import command.factory.CommandFactory;
 import protocol.ProtocolDeserializer;
 import protocol.ProtocolSerializer;
 import protocol.persistence.PersistenceManager;
+import replica.CommandReplicator;
 import storage.StorageRecord;
 
 import java.io.IOException;
@@ -17,6 +18,7 @@ public class ObjectFactory {
     private ProtocolSerializer protocolSerializer;
     private ProtocolDeserializer protocolDeserializer;
     private PersistenceManager persistenceManager;
+    private CommandReplicator commandReplicator;
 
     private ObjectFactory() {
     }
@@ -43,6 +45,7 @@ public class ObjectFactory {
         this.persistenceManager = new PersistenceManager();
         this.protocolSerializer = new ProtocolSerializer();
         this.protocolDeserializer = new ProtocolDeserializer();
+        this.commandReplicator = new CommandReplicator();
         this.commandFactory = new CommandFactory(ObjectFactoryHolder.INSTANCE);
     }
 
@@ -64,5 +67,9 @@ public class ObjectFactory {
 
     public PersistenceManager getPersistenceManager() {
         return persistenceManager;
+    }
+
+    public CommandReplicator getCommandReplicator() {
+        return commandReplicator;
     }
 }

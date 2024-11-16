@@ -5,16 +5,19 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import org.apache.commons.lang3.tuple.Pair;
 
 import config.ObjectFactory;
+import replica.ReplicaClient;
 
 public class ConnectionHandler extends Thread {
     private static final Logger logger = Logger.getLogger(ConnectionHandler.class.getName());
     private final Socket socket;
     private final ObjectFactory objectFactory;
+    private boolean isReplicaSocket;
 
     public ConnectionHandler(Socket socket, ObjectFactory objectFactory) {
         this.socket = socket;
@@ -32,19 +35,29 @@ public class ConnectionHandler extends Thread {
                 logger.info("Received command " + command);
                 String[] args = command.split(" ");
                 logger.info("Command args " + Arrays.toString(args));
-                byte[] response = objectFactory.getCommandFactory().getHandler(args[0].toUpperCase()).handle(args);
+                Handler handler = objectFactory.getCommandFactory().getHandler(args[0].toUpperCase());
+                byte[] response = handler.handle(args);
+
+                if (!isReplicaSocket && objectFactory.getProperties().isMaster() && isWriteCommand(args[0])) {
+                    objectFactory.getCommandReplicator().replicateWriteCommand(command);
+                }
+
+                if (handler instanceof Psync) {
+                    isReplicaSocket = true;
+                    ObjectFactory.getInstance().getProperties().addReplicaClient(new ReplicaClient(socket));
+                    dataOutputStream.write(response);
+                    return;
+                }
 
                 dataOutputStream.write(response);
             }
-
         } catch (IOException e) {
-            throw new RuntimeException(e);
-        } finally {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                logger.warning("Failed to close socket " + e);
-            }
-        }
+            logger.severe("IOException in ConnectionHandler: " + e.getMessage());
+        } 
+    }
+
+    private boolean isWriteCommand(String command) {
+        return Set.of("SET", "DEL", "INCR", "DECR", "RPUSH", "LPUSH", "SADD", "ZADD")
+            .contains(command.toUpperCase());
     }
 }
