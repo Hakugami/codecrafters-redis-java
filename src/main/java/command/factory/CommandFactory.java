@@ -42,7 +42,8 @@ public class CommandFactory {
         GET(Get.class),
         CONFIG(Config.class),
         KEYS(Keys.class),
-        SAVE(Save.class);
+        SAVE(Save.class),
+        INFO(Info.class),;
 
         private final Class<? extends Handler> handler;
 
