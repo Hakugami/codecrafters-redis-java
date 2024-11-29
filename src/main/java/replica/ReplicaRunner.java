@@ -5,6 +5,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -30,10 +31,10 @@ public class ReplicaRunner extends Thread {
         ReplicaProperties replicaProperties = ObjectFactory.getInstance().getProperties().getReplicaProperties();
 
         try (Socket masterSocket = new Socket(replicaProperties.host(), replicaProperties.port());
-                OutputStream outputStream = masterSocket.getOutputStream();
-                DataInputStream dataInputStream = new DataInputStream(masterSocket.getInputStream())) {
+             OutputStream outputStream = masterSocket.getOutputStream();
+             DataInputStream dataInputStream = new DataInputStream(masterSocket.getInputStream())) {
             initReplica(outputStream, dataInputStream);
-            processCommands(dataInputStream);
+            processCommands(outputStream,dataInputStream);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -142,30 +143,33 @@ public class ReplicaRunner extends Thread {
         return stringBuilder.toString();
     }
 
-    private void processCommands(DataInputStream dataInputStream) {
+    private void processCommands(OutputStream outputStream , DataInputStream dataInputStream) {
         ProtocolDeserializer deserializer = ObjectFactory.getInstance().getProtocolDeserializer();
         CommandFactory commandFactory = ObjectFactory.getInstance().getCommandFactory();
-
+    
         while (true) {
             try {
                 Pair<String, Long> parsedInput = deserializer.parseInput(dataInputStream);
                 String commandLine = parsedInput.getLeft();
                 logger.info("Received command from master: " + commandLine);
                 String[] args = commandLine.split(" ");
-
+    
                 Handler handler = commandFactory.getHandler(args[0].toUpperCase());
                 if (handler != null) {
-                    handler.handle(args);
+                    logger.info("Processing command: " + Arrays.toString(args) + " with handler: " + handler.getClass().getName());
+                    byte[] response = handler.handle(args);
+                    // Send response back to master
+                    outputStream.write(response);
+                    outputStream.flush();
                 } else {
                     logger.warning("No handler found for command: " + args[0]);
                 }
-            } catch (EOFException e) {
+            } catch (IOException e) {
                 logger.severe("End of stream reached while processing commands.");
-                break; // Exit the loop if end of stream is reached
+                break;
             } catch (Exception e) {
                 logger.severe("Error processing command from master: " + e.getMessage());
-                // Handle other exceptions
-                break; // Exit the loop if an exception occurs
+                break;
             }
         }
     }

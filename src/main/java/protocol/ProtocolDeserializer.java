@@ -28,6 +28,7 @@ public class ProtocolDeserializer {
                 default -> throw new RuntimeException("Invalid input character: " + c);
             };
         } catch (IOException e) {
+            logger.severe("IO error occurred: " + e.getMessage());
             throw new RuntimeException("IO error occurred", e);
         }
     }

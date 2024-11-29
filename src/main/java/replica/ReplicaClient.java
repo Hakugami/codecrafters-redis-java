@@ -3,7 +3,6 @@ package replica;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,14 +27,8 @@ public class ReplicaClient {
     public void send(byte[] data) {
         logger.info("Sending data to replica, size: " + data.length);
         logger.info("Data content: " + new String(data));
-        synchronized(replicaSocket) {
-            try {
-                OutputStream outputStream = replicaSocket.getOutputStream();
-                outputStream.write(data);
-                outputStream.flush();
-            } catch (IOException e) {
-                logger.severe("Error sending data to replica: " + e.getMessage());
-            }
+        synchronized(socketLock) {
+            executorService.execute(() -> doSend(data));
         }
     }
 

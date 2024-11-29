@@ -14,6 +14,7 @@ public class ReplConf extends AbstractHandler {
     @Override
     public byte[] handle(String[] args) {
         String parameter = args[1].toLowerCase();
+        logger.info("Handling REPLCONF command with parameter: " + parameter);
         switch (parameter) {
             case "listening-port" -> {
                 if (!NumberUtils.isDigits(args[2])) {
@@ -27,11 +28,12 @@ public class ReplConf extends AbstractHandler {
             }
             case "getack" -> {
                 long offset = ObjectFactory.getInstance().getProperties().getReplicationOffset();
-                return protocolSerializer.array(
-                    Stream.of("REPLCONF", "ACK", String.valueOf(offset))
-                        .map(String::getBytes)
-                        .toArray(byte[][]::new)
-                );
+                // Format as RESP array with 3 elements: REPLCONF, ACK, <offset>
+                return protocolSerializer.array(new byte[][] {
+                        "REPLCONF".getBytes(),
+                        "ACK".getBytes(),
+                        String.valueOf(offset).getBytes()
+                });
             }
             default -> {
                 return protocolSerializer.simpleError("ERR invalid parameter");
