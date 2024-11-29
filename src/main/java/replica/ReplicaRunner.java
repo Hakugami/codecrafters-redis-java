@@ -143,7 +143,7 @@ public class ReplicaRunner extends Thread {
         return stringBuilder.toString();
     }
 
-    private void processCommands(OutputStream outputStream , DataInputStream dataInputStream) {
+    private void processCommands(OutputStream outputStream, DataInputStream dataInputStream) {
         ProtocolDeserializer deserializer = ObjectFactory.getInstance().getProtocolDeserializer();
         CommandFactory commandFactory = ObjectFactory.getInstance().getCommandFactory();
     
@@ -152,12 +152,26 @@ public class ReplicaRunner extends Thread {
                 Pair<String, Long> parsedInput = deserializer.parseInput(dataInputStream);
                 String commandLine = parsedInput.getLeft();
                 logger.info("Received command from master: " + commandLine);
-                String[] args = commandLine.split(" ");
+
+                // Skip processing responses (they start with '+')
+                if (commandLine.startsWith("+")) {
+                    logger.fine("Received response from master: " + commandLine);
+                    continue;
+                }
+                
+                // If the message starts with "ERR", it's an error message - just log it and continue
+                if (commandLine.startsWith("ERR")) {
+                    logger.warning("Received error from master: " + commandLine);
+                    continue;
+                }
     
+                String[] args = commandLine.split(" ");
                 Handler handler = commandFactory.getHandler(args[0].toUpperCase());
                 if (handler != null) {
                     logger.info("Processing command: " + Arrays.toString(args) + " with handler: " + handler.getClass().getName());
                     byte[] response = handler.handle(args);
+                    long added = ObjectFactory.getInstance().getProperties().getReplicationOffset().addAndGet(parsedInput.getRight());
+                    logger.info("Processed command: " + Arrays.toString(args) + " with offset: " + added);
                     // Send response back to master
                     outputStream.write(response);
                     outputStream.flush();

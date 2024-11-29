@@ -24,7 +24,7 @@ public class Info extends AbstractHandler {
         return switch (arg) {
             case "replication" -> {
                 String replicationId = ObjectFactory.getInstance().getProperties().getReplicationId();
-                long replicationOffset = ObjectFactory.getInstance().getProperties().getReplicationOffset();
+                long replicationOffset = ObjectFactory.getInstance().getProperties().getReplicationOffset().get();
                 StringBuilder bulkString = new StringBuilder();
                 bulkString.append(replicationRole).append("\n");
                 bulkString.append("master_replid:").append(replicationId).append("\n");

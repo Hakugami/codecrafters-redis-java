@@ -23,7 +23,7 @@ public class Psync extends AbstractHandler {
     @Override
     public byte[] handle(String[] args) {
         String replicationId = ObjectFactory.getInstance().getProperties().getReplicationId();
-        long replicationOffset = ObjectFactory.getInstance().getProperties().getReplicationOffset();
+        long replicationOffset = ObjectFactory.getInstance().getProperties().getReplicationOffset().getAcquire();
         String response = String.format("FULLRESYNC %s %s", replicationId, replicationOffset);
         byte[] fullRsyncResponseBytes = ObjectFactory.getInstance().getProtocolSerializer().simpleString(response);
         

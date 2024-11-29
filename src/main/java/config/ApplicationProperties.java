@@ -4,6 +4,7 @@ package config;
 import java.security.SecureRandom;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 import replica.ReplicaClient;
 
@@ -15,7 +16,7 @@ public class ApplicationProperties {
 
     //Replication Master
     private String replicationId;
-    private long replicationOffset = 0L;
+    private AtomicLong replicationOffset = new AtomicLong(0);
     private List<ReplicaClient> replicaClients;
 
 
@@ -55,7 +56,7 @@ public class ApplicationProperties {
 
     private void setMasterProperties() {
         this.replicationId = generateRandomString(40);
-        this.replicationOffset = 0L;
+        this.replicationOffset = new AtomicLong(0);
     }
 
     public static String generateRandomString(int length) {
@@ -99,7 +100,7 @@ public class ApplicationProperties {
         return replicationId;
     }
 
-    public long getReplicationOffset() {
+    public AtomicLong getReplicationOffset() {
         return replicationOffset;
     }
 

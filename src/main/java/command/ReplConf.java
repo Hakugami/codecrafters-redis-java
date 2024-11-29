@@ -27,7 +27,7 @@ public class ReplConf extends AbstractHandler {
                 }
             }
             case "getack" -> {
-                long offset = ObjectFactory.getInstance().getProperties().getReplicationOffset();
+                long offset = ObjectFactory.getInstance().getProperties().getReplicationOffset().get();
                 // Format as RESP array with 3 elements: REPLCONF, ACK, <offset>
                 return protocolSerializer.array(new byte[][] {
                         "REPLCONF".getBytes(),

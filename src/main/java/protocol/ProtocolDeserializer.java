@@ -20,11 +20,13 @@ public class ProtocolDeserializer {
             }
 
             char c = (char) firstByte;
+            logger.info("Parsing input: " + c);
             return switch (c) {
                 case '*' -> parseArray(dataInputStream);
                 case '$' -> parseBulkString(dataInputStream);
                 case '+' -> parseSimpleString(dataInputStream);
                 case ':' -> parseInteger(dataInputStream);  // Add support for integers
+                case '-' -> parseError(dataInputStream); // Add support for error messages
                 default -> throw new RuntimeException("Invalid input character: " + c);
             };
         } catch (IOException e) {
@@ -179,6 +181,28 @@ public class ProtocolDeserializer {
         return stringBuilder.toString();
     }
 
+    private Pair<String, Long> parseError(DataInputStream dataInputStream) throws IOException {
+        StringBuilder stringBuilder = new StringBuilder();
+        long bytesRead = 0;
+
+        while (true) {
+            int b = dataInputStream.read();
+            if (b == -1) {
+                throw new EOFException("Unexpected end of stream while reading error message");
+            }
+            char c = (char) b;
+            if (c == '\r') {
+                // Consume \n
+                dataInputStream.read();
+                bytesRead += 2;
+                break;
+            }
+            stringBuilder.append(c);
+            bytesRead++;
+        }
+
+        return Pair.of(stringBuilder.toString(), bytesRead);
+    }
 
 
 }
