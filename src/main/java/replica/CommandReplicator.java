@@ -1,8 +1,10 @@
 package replica;
 
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 import config.ObjectFactory;
+import replica.ReplicaClient;
 
 public class CommandReplicator {
     private static final Logger logger = Logger.getLogger(CommandReplicator.class.getName());
@@ -19,16 +21,16 @@ public class CommandReplicator {
     }
 
     private void replicate(ReplicaClient replicaClient, String command) {
-        StringBuilder formatted = new StringBuilder();
         String[] args = command.split(" ");
-        formatted.append("*").append(args.length).append("\r\n");
 
+        StringBuilder formattedCommand = new StringBuilder();
+        formattedCommand.append("*").append(args.length).append("\r\n");
         for (String arg : args) {
-            formatted.append("$").append(arg.length()).append("\r\n");
-            formatted.append(arg).append("\r\n");
+            formattedCommand.append("$").append(arg.length()).append("\r\n");
+            formattedCommand.append(arg).append("\r\n");
         }
 
-        logger.info("Sending formatted command to replica: " + formatted);
-        replicaClient.send(formatted.toString().getBytes());
+        byte[] data = formattedCommand.toString().getBytes(StandardCharsets.UTF_8);
+        replicaClient.send(data);
     }
 }

@@ -32,37 +32,41 @@ public class RDBLoader {
                 ObjectFactory.getInstance().getProperties().getDbFileName());
 
         try (DataInputStream inputStream = new DataInputStream(new FileInputStream(fullFilename))) {
-            // Skip magic and version
-            skipMagicAndVersion(inputStream);
-
-            // Skip to RESIZEDB
-            byte b = inputStream.readByte();
-            while ((b & RDB_OPCODE_RESIZEDB) != RDB_OPCODE_RESIZEDB) {
-                b = inputStream.readByte();
-            }
-
-            // Read hash table sizes
-            readLengthEncodedInt(inputStream); // db size
-            readLengthEncodedInt(inputStream); // expiry size
-
-            // Read key-value pairs
-            Map<String, StorageRecord> result = new HashMap<>();
-            try {
-                while (true) {
-                    Pair<String, StorageRecord> keyValuePair = readKeyValuePair(inputStream);
-                    if (keyValuePair == null) {
-                        continue;
-                    }
-                    result.put(keyValuePair.getKey(), keyValuePair.getValue());
-                }
-            } catch (EOFException e) {
-                LOGGER.info("End of RDB file reached");
-            }
-            return result;
+            return readAllPairsFromStream(inputStream);
         } catch (FileNotFoundException e) {
             LOGGER.info("RDB file is not present");
             return Map.of();
         }
+    }
+
+    public Map<String, StorageRecord> readAllPairsFromStream(DataInputStream inputStream) throws IOException {
+        // Skip magic and version
+        skipMagicAndVersion(inputStream);
+
+        // Skip to RESIZEDB
+        byte b = inputStream.readByte();
+        while ((b & RDB_OPCODE_RESIZEDB) != RDB_OPCODE_RESIZEDB) {
+            b = inputStream.readByte();
+        }
+
+        // Read hash table sizes
+        readLengthEncodedInt(inputStream); // db size
+        readLengthEncodedInt(inputStream); // expiry size
+
+        // Read key-value pairs
+        Map<String, StorageRecord> result = new HashMap<>();
+        try {
+            while (true) {
+                Pair<String, StorageRecord> keyValuePair = readKeyValuePair(inputStream);
+                if (keyValuePair == null) {
+                    continue;
+                }
+                result.put(keyValuePair.getKey(), keyValuePair.getValue());
+            }
+        } catch (EOFException e) {
+            LOGGER.info("End of RDB file reached");
+        }
+        return result;
     }
 
     private void skipMagicAndVersion(DataInputStream inputStream) throws IOException {

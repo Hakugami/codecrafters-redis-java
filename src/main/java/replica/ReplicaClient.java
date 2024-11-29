@@ -3,6 +3,7 @@ package replica;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.IOException;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,14 +18,25 @@ public class ReplicaClient {
 
     private final ExecutorService executorService;
 
+    private final Object socketLock = new Object();
+
     public ReplicaClient(Socket replicaSocket) {
         this.replicaSocket = replicaSocket;
         this.executorService = Executors.newSingleThreadExecutor();
     }
 
     public void send(byte[] data) {
-        logger.info("Sending data to replica at port" + replicaSocket.getPort() + "the command is " + new String(data));
-        executorService.execute(() -> doSend(data));
+        logger.info("Sending data to replica, size: " + data.length);
+        logger.info("Data content: " + new String(data));
+        synchronized(replicaSocket) {
+            try {
+                OutputStream outputStream = replicaSocket.getOutputStream();
+                outputStream.write(data);
+                outputStream.flush();
+            } catch (IOException e) {
+                logger.severe("Error sending data to replica: " + e.getMessage());
+            }
+        }
     }
 
     public byte[] sendAndAwaitResponse(byte[] data, long timeout) {
@@ -61,13 +73,15 @@ public class ReplicaClient {
     }
 
     private void doSend(byte[] data) {
-        try {
-            OutputStream outputStream = replicaSocket.getOutputStream();
-            outputStream.write(data);
-            logger.info("Data sent to replica at port " + replicaSocket.getPort());
-            outputStream.flush();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        synchronized(socketLock) {
+            try {
+                OutputStream outputStream = replicaSocket.getOutputStream();
+                outputStream.write(data);
+                logger.info("Data sent to replica at port " + replicaSocket.getPort());
+                outputStream.flush();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

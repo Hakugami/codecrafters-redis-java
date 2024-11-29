@@ -5,9 +5,12 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.logging.Logger;
 
 
 public class ProtocolDeserializer {
+    private static final Logger logger = Logger.getLogger(ProtocolDeserializer.class.getName());
+
     public Pair<String, Long> parseInput(DataInputStream dataInputStream) throws EOFException {
         try {
             // Read the first byte
@@ -38,21 +41,24 @@ public class ProtocolDeserializer {
             return Pair.of("$-1\r\n", lengthPair.getRight());
         }
 
-        // Read exactly 'length' bytes
-        byte[] bytes = new byte[length];
-        int bytesRead = dataInputStream.readNBytes(bytes, 0, length);
-        if (bytesRead != length) {
-            throw new EOFException("Incomplete bulk string: expected " + length + " bytes, got " + bytesRead);
+        // Read length bytes plus \r\n terminator
+        int totalLength = length + 2; // Include \r\n
+        byte[] bytes = new byte[totalLength];
+        int bytesRead = dataInputStream.readNBytes(bytes, 0, totalLength);
+        
+        if (bytesRead != totalLength) {
+            throw new EOFException("Incomplete bulk string: expected " + totalLength + " bytes, got " + bytesRead);
         }
 
-        // Read the trailing \r\n
-        int cr = dataInputStream.read();
-        int lf = dataInputStream.read();
-        if (cr != '\r' || lf != '\n') {
+        // Validate terminator
+        if (bytes[length] != '\r' || bytes[length + 1] != '\n') {
+            logger.severe("Invalid bulk string terminator: " + bytes[length] + " " + bytes[length + 1]);
+            logger.severe("Bytes: " + new String(bytes));
             throw new RuntimeException("Invalid bulk string terminator");
         }
 
-        return Pair.of(new String(bytes), lengthPair.getRight() + length + 2L);
+        // Convert to string excluding \r\n
+        return Pair.of(new String(bytes, 0, length), lengthPair.getRight() + totalLength);
     }
 
     private Pair<String, Long> parseSimpleString(DataInputStream dataInputStream) throws EOFException {
@@ -171,5 +177,7 @@ public class ProtocolDeserializer {
         }
         return stringBuilder.toString();
     }
+
+
 
 }

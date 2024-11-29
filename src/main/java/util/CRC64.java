@@ -19,11 +19,11 @@ public class CRC64 {
     }
 
     public static long checksum(byte[] data) {
-        long crc = 0xFFFFFFFFFFFFFFFFL;
+        long crc = 0xFFFFFFFFFFFFFFFFL; // initial value
         for (byte b : data) {
             int idx = ((int) crc ^ b) & 0xFF;
             crc = CRC64_TABLE[idx] ^ (crc >>> 8);
         }
-        return crc ^ 0xFFFFFFFFFFFFFFFFL;
+        return ~crc; // final XOR
     }
 }

@@ -38,26 +38,28 @@ public class ConnectionHandler extends Thread {
                 Handler handler = objectFactory.getCommandFactory().getHandler(args[0].toUpperCase());
                 byte[] response = handler.handle(args);
 
-                if (!isReplicaSocket && objectFactory.getProperties().isMaster() && isWriteCommand(args[0])) {
-                    objectFactory.getCommandReplicator().replicateWriteCommand(command);
-                }
-
                 if (handler instanceof Psync) {
                     isReplicaSocket = true;
                     ObjectFactory.getInstance().getProperties().addReplicaClient(new ReplicaClient(socket));
                     dataOutputStream.write(response);
-                    return;
+                    dataOutputStream.flush();
+                    // Do not return here; continue the loop to keep the connection alive
+                    continue;
+                }
+
+                if (!isReplicaSocket && objectFactory.getProperties().isMaster() && isWriteCommand(args[0])) {
+                    objectFactory.getCommandReplicator().replicateWriteCommand(command);
                 }
 
                 dataOutputStream.write(response);
             }
         } catch (IOException e) {
             logger.severe("IOException in ConnectionHandler: " + e.getMessage());
-        } 
+        }
     }
 
     private boolean isWriteCommand(String command) {
         return Set.of("SET", "DEL", "INCR", "DECR", "RPUSH", "LPUSH", "SADD", "ZADD")
-            .contains(command.toUpperCase());
+                .contains(command.toUpperCase());
     }
 }
