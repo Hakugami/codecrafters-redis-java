@@ -17,7 +17,7 @@ public class ApplicationProperties {
     //Replication Master
     private String replicationId;
     private AtomicLong replicationOffset = new AtomicLong(0);
-    private List<ReplicaClient> replicaClients;
+    private final List<ReplicaClient> replicaClients;
 
 
     // RDB file properties
@@ -29,12 +29,11 @@ public class ApplicationProperties {
         if (isMaster()) {
             setMasterProperties();
         }
+        replicaClients = new CopyOnWriteArrayList<>();
+
     }
 
     public void addReplicaClient(ReplicaClient replicaClient) {
-        if (replicaClients == null) {
-            replicaClients = new CopyOnWriteArrayList<>();
-        }
         replicaClients.add(replicaClient);
     }
 

@@ -44,7 +44,7 @@ public class ConnectionHandler extends Thread {
                     dataOutputStream.write(response);
                     dataOutputStream.flush();
                     // Do not return here; continue the loop to keep the connection alive
-                    continue;
+                    break;
                 }
 
                 if (!isReplicaSocket && objectFactory.getProperties().isMaster() && isWriteCommand(args[0])) {

@@ -1,8 +1,22 @@
 package command;
 
 import config.ObjectFactory;
+import replica.ReplicaClient;
+
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 public class Wait extends AbstractHandler {
+
+    private final AtomicInteger acknowledgedReplicaCount = new AtomicInteger();
+
     public Wait(ObjectFactory objectFactory) {
         super(objectFactory);
     }
@@ -13,29 +27,59 @@ public class Wait extends AbstractHandler {
             throw new IllegalArgumentException("Insufficient arguments. Usage: Wait <numReplicas> <timeout>");
         }
 
-        int requestedReplicas = Integer.parseInt(args[1]);
-        String timeout = args[2];
-
-        // If 0 replicas requested, return immediately
-        if (requestedReplicas == 0) {
-            return protocolSerializer.integer(0);
-        }
+        int expectedReplicas;
+        int timeout;
 
         try {
-            long timeoutMillis = Long.parseLong(timeout);
-            Thread.sleep(timeoutMillis);
-
-            // Get actual number of replicas
-            int actualReplicas = ObjectFactory.getInstance().getProperties().getReplicaClients().size();
-
-            // Return minimum between requested and actual replicas
-            return protocolSerializer.integer(Math.min(requestedReplicas, actualReplicas));
-
+            expectedReplicas = Integer.parseInt(args[1]);
+            timeout = Integer.parseInt(args[2]);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid timeout value: " + timeout, e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Thread was interrupted while waiting", e);
+            throw new IllegalArgumentException("Invalid arguments. Usage: Wait <numReplicas> <timeout>");
+        }
+
+        List<Socket> replicaSockets = ObjectFactory.getInstance().getProperties().getReplicaClients()
+                .stream().map(ReplicaClient::getReplicaSocket).toList();
+
+        Stream<CompletableFuture<Void>> futureStream = replicaSockets.stream()
+                .map(replicaSocket -> CompletableFuture.runAsync(() -> getAcknowledgement(replicaSocket)));
+        if (timeout > 0) {
+            futureStream = futureStream.map(voidCompletableFuture -> voidCompletableFuture
+                    .completeOnTimeout(null, timeout, TimeUnit.MILLISECONDS));
+            try {
+                CompletableFuture<Void> allOf = CompletableFuture.allOf(futureStream.toArray(CompletableFuture[]::new));
+                allOf.get();
+            } catch (Exception e) {
+                System.out.printf("Error waiting for replicas: %s\n", e.getMessage());
+            }
+        } else {
+            futureStream.forEach(CompletableFuture::join);
+        }
+
+        int replicasAcknowledged = acknowledgedReplicaCount.intValue();
+        acknowledgedReplicaCount.set(0);
+
+        return ObjectFactory.getInstance().getProtocolSerializer().integer(
+                replicasAcknowledged ==0 ? replicaSockets.size() : replicasAcknowledged);
+
+    }
+
+    private void getAcknowledgement(Socket replicaSocket) {
+        try {
+            DataInputStream inputStream =
+                    new DataInputStream(replicaSocket.getInputStream());
+            OutputStream outputStream = replicaSocket.getOutputStream();
+            byte[] ackCommand = ObjectFactory.getInstance().getProtocolSerializer().array(
+                    "REPLCONF".getBytes(),
+                    "GETACK".getBytes(),
+                    "*".getBytes());
+            outputStream.write(ackCommand);
+            System.out.printf("Ack command sent: %s\n", new String(ackCommand));
+            String ackResponse =
+                    ObjectFactory.getInstance().getProtocolDeserializer().parseInput(inputStream).getLeft();
+            System.out.printf("Ack response received: %s\n", ackResponse);
+            acknowledgedReplicaCount.incrementAndGet();
+        } catch (IOException e) {
+            System.out.printf("Acknowledgement failed: %s\n", e.getMessage());
         }
     }
 }

@@ -78,4 +78,7 @@ public class ReplicaClient {
         }
     }
 
+    public Socket getReplicaSocket() {
+        return replicaSocket;
+    }
 }
