@@ -169,7 +169,7 @@ public class ReplicaRunner extends Thread {
                 String[] args = commandLine.split(" ");
                 Handler handler = commandFactory.getHandler(args[0].toUpperCase());
 
-                long newOffset = calculateCommandOffset(commandLine.split(" "));
+                long newOffset = calculateCommandOffset(args);
 
 
                 if (handler != null) {
