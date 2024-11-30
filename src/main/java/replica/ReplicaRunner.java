@@ -24,6 +24,7 @@ import storage.StorageRecord;
 
 public class ReplicaRunner extends Thread {
     private static final Logger logger = Logger.getLogger(ReplicaRunner.class.getName());
+    private long offset = 0;
 
     @Override
     public void run() {
@@ -167,14 +168,24 @@ public class ReplicaRunner extends Thread {
     
                 String[] args = commandLine.split(" ");
                 Handler handler = commandFactory.getHandler(args[0].toUpperCase());
+
+                long newOffset = calculateCommandOffset(commandLine.split(" "));
+
+
                 if (handler != null) {
                     logger.info("Processing command: " + Arrays.toString(args) + " with handler: " + handler.getClass().getName());
                     byte[] response = handler.handle(args);
-                    long added = ObjectFactory.getInstance().getProperties().getReplicationOffset().addAndGet(parsedInput.getRight());
-                    logger.info("Processed command: " + Arrays.toString(args) + " with offset: " + added);
+                    logger.info("Processed command: " + Arrays.toString(args) + " with offset: " + newOffset);
+                    ObjectFactory.getInstance().getProperties().getReplicationOffset().set(newOffset);
                     // Send response back to master
-                    outputStream.write(response);
-                    outputStream.flush();
+                    if (args[0].equalsIgnoreCase("REPLCONF") && requiresResponse(args[0])) {
+                        outputStream.write(response);
+                        outputStream.flush();
+                    } else if (requiresResponse(args[0]) && !args[0].equalsIgnoreCase("PING")) {
+                        outputStream.write(response);
+                        outputStream.flush();
+                    }
+
                 } else {
                     logger.warning("No handler found for command: " + args[0]);
                 }
@@ -186,5 +197,26 @@ public class ReplicaRunner extends Thread {
                 break;
             }
         }
+    }
+
+    private boolean requiresResponse(String command) {
+        return (command.startsWith("REPLCONF") || command.startsWith("PING") || command.startsWith("PSYNC"));
+    }
+
+    private long calculateCommandOffset(String[] command) {
+        // Start with array header: *<number>\r\n
+        long messageLength = 1 + String.valueOf(command.length).length() + 2;
+        
+        // Add length for each argument: $<length>\r\n<argument>\r\n
+        for (String arg : command) {
+            messageLength += 1;  // $
+            messageLength += String.valueOf(arg.length()).length(); // length digits
+            messageLength += 2;  // \r\n
+            messageLength += arg.length(); // actual argument
+            messageLength += 2;  // \r\n
+        }
+        
+        offset += messageLength;
+        return offset;
     }
 }
